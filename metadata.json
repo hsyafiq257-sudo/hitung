@@ -1,0 +1,8 @@
+{
+  "name": "Kalkulator Saham Komprehensif",
+  "description": "Kalkulator keuangan saham komprehensif untuk trading, investasi, dan aksi korporasi secara interaktif, akurat, dan mobile-friendly.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
