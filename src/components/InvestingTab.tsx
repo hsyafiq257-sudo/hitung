@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, Wallet, Landmark, ShieldCheck, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Wallet, Landmark, ShieldCheck, AlertCircle, TrendingUp, Coins, Calculator, Percent } from "lucide-react";
 import { formatRupiah, formatNumber, formatPercent, generateId } from "../utils";
 import { DCAMonthlyPriceRow } from "../types";
 
@@ -106,7 +106,71 @@ export default function InvestingTab() {
   const dcaGainLoss = dcaTotalValue - totalDcaSpent;
 
   // =========================================================
-  // 2. STATE & LOGIC: DIVIDEND CALCULATOR (DUAL INPUT SYNC)
+  // 2. STATE & LOGIC: COMPOUNDING SIMULATOR (WITH DRIP OPTION)
+  // =========================================================
+  const [compInitialModal, setCompInitialModal] = useState<number | "">(10000000);
+  const [compMonthlyContribution, setCompMonthlyContribution] = useState<number | "">(1000000);
+  const [compIncludeCapitalGain, setCompIncludeCapitalGain] = useState<boolean>(false);
+  const [compCapitalGain, setCompCapitalGain] = useState<number | "">(7);
+  const [compDividendYield, setCompDividendYield] = useState<number | "">(5);
+  const [compReinvestDividends, setCompReinvestDividends] = useState<boolean>(true);
+  const [compDurationYears, setCompDurationYears] = useState<number | "">(10);
+  const [compFrequency, setCompFrequency] = useState<"monthly" | "yearly">("monthly");
+
+  const effCompInitial = compInitialModal === "" ? 0 : compInitialModal;
+  const effCompMonthly = compMonthlyContribution === "" ? 0 : compMonthlyContribution;
+  const effCapitalGain = compIncludeCapitalGain ? (compCapitalGain === "" ? 0 : compCapitalGain) : 0;
+  const effDivYield = compDividendYield === "" ? 0 : compDividendYield;
+  const effCompYears = compDurationYears === "" ? 0 : compDurationYears;
+
+  let currentVal = effCompInitial;
+  let currentDep = effCompInitial;
+  let accumulatedCashDividends = 0;
+  const compMilestones: { year: number; value: number; deposit: number; interestEarned: number; dividendEarned: number; accumDiv: number }[] = [];
+
+  for (let y = 1; y <= effCompYears; y++) {
+    const rateToUse = compReinvestDividends ? (effCapitalGain + effDivYield) : effCapitalGain;
+    const monthlyRate = (rateToUse / 100) / 12;
+
+    if (compFrequency === "monthly") {
+      for (let m = 1; m <= 12; m++) {
+        currentVal = currentVal * (1 + monthlyRate) + effCompMonthly;
+        currentDep += effCompMonthly;
+      }
+    } else {
+      // Yearly: compound monthly, then add once at the end of the year
+      for (let m = 1; m <= 12; m++) {
+        currentVal = currentVal * (1 + monthlyRate);
+      }
+      currentVal += effCompMonthly;
+      currentDep += effCompMonthly;
+    }
+
+    // Dividen dihitung di akhir tahun berdasarkan nilai portofolio akhir tahun tersebut dikali Dividend Yield %
+    const annualDiv = currentVal * (effDivYield / 100);
+
+    if (!compReinvestDividends) {
+      accumulatedCashDividends += annualDiv;
+    }
+
+    compMilestones.push({
+      year: y,
+      value: Math.round(currentVal),
+      deposit: Math.round(currentDep),
+      interestEarned: Math.round(currentVal - currentDep),
+      dividendEarned: Math.round(annualDiv),
+      accumDiv: Math.round(accumulatedCashDividends),
+    });
+  }
+
+  const finalValue = currentVal; // Total Nilai Portofolio (Saham)
+  const finalDeposited = currentDep; // Total Modal Disetor
+  const finalCashDividends = accumulatedCashDividends; // Total Kas Dividen
+  const finalTotalWealth = finalValue + finalCashDividends; // Total Kekayaan Akhir
+  const finalGain = finalTotalWealth - finalDeposited; // Total Keuntungan
+
+  // =========================================================
+  // 3. STATE & LOGIC: DIVIDEND CALCULATOR (DUAL INPUT SYNC)
   // =========================================================
   const [divLots, setDivLots] = useState<number | "">(50);
   const [divAvgBuyPrice, setDivAvgBuyPrice] = useState<number | "">(4000);
@@ -355,7 +419,246 @@ export default function InvestingTab() {
         </div>
       </section>
 
-      {/* ======================= SECTION 2: DIVIDEND CALCULATOR (DUAL INPUT SYNC) ======================= */}
+      {/* ======================= SECTION 2: COMPOUNDING SIMULATOR ======================= */}
+      <section id="compounding-section" className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-slate-50 border-b border-slate-200 p-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-50 rounded-lg">
+              <Calculator className="w-6 h-6 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">2. Kalkulator Simulasi Compounding (Bunga Berbunga)</h2>
+              <p className="text-xs text-slate-500 mt-0.5 font-medium">Simulasikan pertumbuhan dana investasi Anda secara eksponensial dengan opsi Reinvestasi Dividen (DRIP)</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Inputs Panel */}
+          <div className="lg:col-span-5 space-y-5">
+            <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-wider border-b border-slate-200 pb-2">Parameter Investasi</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Modal Awal (Rp)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-medium">Rp</span>
+                  <input
+                    type="number"
+                    value={compInitialModal}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCompInitialModal(val === "" ? "" : Math.max(0, parseInt(val) || 0));
+                    }}
+                    className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg pl-9 pr-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Tambahan Investasi Rutin (Rp)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-medium">Rp</span>
+                    <input
+                      type="number"
+                      value={compMonthlyContribution}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCompMonthlyContribution(val === "" ? "" : Math.max(0, parseInt(val) || 0));
+                      }}
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg pl-9 pr-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Frekuensi Setoran</label>
+                  <select
+                    value={compFrequency}
+                    onChange={(e) => setCompFrequency(e.target.value as "monthly" | "yearly")}
+                    className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 h-[38px] cursor-pointer"
+                  >
+                    <option value="monthly">Bulanan</option>
+                    <option value="yearly">Tahunan</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 select-none bg-slate-50 border border-slate-100 p-2.5 rounded-xl">
+                <input
+                  type="checkbox"
+                  id="compIncludeCapitalGain"
+                  checked={compIncludeCapitalGain}
+                  onChange={(e) => setCompIncludeCapitalGain(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                />
+                <label htmlFor="compIncludeCapitalGain" className="text-[11px] font-bold text-slate-700 cursor-pointer uppercase leading-tight">
+                  Sertakan Estimasi Kenaikan Harga (Capital Gain)?
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 leading-tight">Capital Gain Tahunan (%)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.1"
+                      disabled={!compIncludeCapitalGain}
+                      value={compIncludeCapitalGain ? (compCapitalGain === "" ? "" : compCapitalGain) : 0}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCompCapitalGain(val === "" ? "" : Math.max(0, parseFloat(val) || 0));
+                      }}
+                      className={`w-full border rounded-lg pl-3 pr-8 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50 ${
+                        compIncludeCapitalGain 
+                          ? "bg-white border-slate-200 text-slate-800" 
+                          : "bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed"
+                      }`}
+                    />
+                    <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-mono">%</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 leading-tight">Dividend Yield Tahunan (%)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={compDividendYield}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCompDividendYield(val === "" ? "" : Math.max(0, parseFloat(val) || 0));
+                      }}
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg pl-3 pr-8 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    />
+                    <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-mono">%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center pt-1">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Durasi (Tahun)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={compDurationYears}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCompDurationYears(val === "" ? "" : Math.max(1, Math.min(50, parseInt(val) || 1)));
+                      }}
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg pl-3 pr-14 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    />
+                    <span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold uppercase">Thn</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 mt-4 sm:mt-0 select-none bg-indigo-50/40 border border-indigo-100/50 p-2 rounded-xl">
+                  <input
+                    type="checkbox"
+                    id="compReinvestDividends"
+                    checked={compReinvestDividends}
+                    onChange={(e) => setCompReinvestDividends(e.target.checked)}
+                    className="w-4.5 h-4.5 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <label htmlFor="compReinvestDividends" className="text-[11px] font-bold text-slate-700 cursor-pointer uppercase leading-tight">
+                    Reinvestasi Dividen (DRIP)
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-indigo-50 border border-indigo-100 p-3.5 rounded-xl flex items-start gap-2.5 text-[11px] text-indigo-800 leading-relaxed">
+              <AlertCircle className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold">Kekuatan Compounding:</span> Semakin lama durasi investasi Anda, semakin besar porsi keuntungan (bunga majemuk) dibandingkan dengan akumulasi modal dasar yang Anda setorkan.
+              </div>
+            </div>
+          </div>
+
+          {/* Outputs Panel */}
+          <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-5">
+              <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-wider border-b border-slate-200 pb-2">Rangkuman Akumulasi Masa Depan</h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="bg-gradient-to-br from-indigo-50/50 to-white p-3 rounded-xl border border-indigo-100 shadow-sm min-w-0">
+                  <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-bold truncate">Portofolio (Saham)</span>
+                  <span className="text-xs sm:text-sm font-extrabold text-indigo-700 font-mono block mt-1 break-all">
+                    {formatRupiah(finalValue)}
+                  </span>
+                  <span className="block text-[9px] text-slate-400 mt-0.5 truncate">Pertumbuhan nilai saham</span>
+                </div>
+
+                <div className="bg-gradient-to-br from-emerald-50/40 to-white p-3 rounded-xl border border-emerald-100 shadow-sm min-w-0">
+                  <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-bold truncate">Total Kas Dividen</span>
+                  {compReinvestDividends ? (
+                    <div>
+                      <span className="text-xs font-bold text-slate-400 block mt-1">Rp 0</span>
+                      <span className="block text-[9px] text-emerald-600 font-semibold mt-0.5 leading-tight">Digulung ke portofolio</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <span className="text-xs sm:text-sm font-extrabold text-emerald-600 font-mono block mt-1 break-all">
+                        {formatRupiah(finalCashDividends)}
+                      </span>
+                      <span className="block text-[9px] text-slate-400 mt-0.5 truncate">Dividen tunai terpisah</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm min-w-0">
+                  <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-bold truncate">Total Modal Disetor</span>
+                  <span className="text-xs sm:text-sm font-extrabold text-slate-700 font-mono block mt-1 break-all">
+                    {formatRupiah(finalDeposited)}
+                  </span>
+                  <span className="block text-[9px] text-slate-400 mt-0.5 truncate">Modal awal + rutin</span>
+                </div>
+
+                <div className="bg-gradient-to-br from-blue-50/50 to-white p-3 rounded-xl border border-blue-100 shadow-sm min-w-0">
+                  <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-bold truncate">Kekayaan Akhir</span>
+                  <span className="text-xs sm:text-sm font-extrabold text-blue-700 font-mono block mt-1 break-all">
+                    {formatRupiah(finalTotalWealth)}
+                  </span>
+                  <span className="block text-[9px] text-blue-600 font-bold mt-0.5 truncate">
+                    +{formatPercent(finalDeposited > 0 ? (finalGain / finalDeposited) * 100 : 0)} Net Growth
+                  </span>
+                </div>
+              </div>
+
+              {/* Milestones Perkembangan */}
+              {compMilestones.length > 0 && (
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                  <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Milestone Pertumbuhan Portofolio</span>
+                    <span className="text-[9px] text-slate-400 font-medium">Berdasarkan tahun durasi</span>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 scrollbar-none">
+                    {compMilestones.map((ms) => (
+                      <div key={ms.year} className="px-4 py-2.5 flex justify-between items-center text-xs hover:bg-slate-50/40 transition-colors">
+                        <span className="font-bold text-slate-700 font-mono">Tahun {ms.year}</span>
+                        <div className="text-right">
+                          <span className="font-bold text-slate-800 font-mono block text-xs sm:text-sm">
+                            {formatRupiah(ms.value + ms.accumDiv)}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+                            Portofolio: {formatRupiah(ms.value)} | Dividen Thn Ini: <span className="text-emerald-600 font-semibold">{formatRupiah(ms.dividendEarned)}</span>
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ======================= SECTION 3: DIVIDEND CALCULATOR (DUAL INPUT SYNC) ======================= */}
       <section id="dividend-section" className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         <div className="bg-slate-50 border-b border-slate-200 p-6">
           <div className="flex items-center gap-3">
@@ -363,7 +666,7 @@ export default function InvestingTab() {
               <Landmark className="w-6 h-6 text-emerald-600" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-800">2. Kalkulator Dividen (Sinkronisasi Fleksibel)</h2>
+              <h2 className="text-lg font-bold text-slate-800">3. Kalkulator Dividen (Sinkronisasi Fleksibel)</h2>
               <p className="text-xs text-slate-500 mt-0.5 font-medium">Hitung estimasi penerimaan dividen berdasarkan persentase Yield ATAU Dividend per Share (DPS) secara dua arah</p>
             </div>
           </div>
@@ -479,7 +782,7 @@ export default function InvestingTab() {
         </div>
       </section>
 
-      {/* ======================= SECTION 3: PORTFOLIO MARGIN OF SAFETY (MoS) ======================= */}
+      {/* ======================= SECTION 4: PORTFOLIO MARGIN OF SAFETY (MoS) ======================= */}
       <section id="mos-section" className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         <div className="bg-slate-50 border-b border-slate-200 p-6">
           <div className="flex items-center gap-3">
@@ -487,7 +790,7 @@ export default function InvestingTab() {
               <ShieldCheck className="w-6 h-6 text-emerald-600" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-800">3. Margin of Safety (MoS)</h2>
+              <h2 className="text-lg font-bold text-slate-800">4. Margin of Safety (MoS)</h2>
               <p className="text-xs text-slate-500 mt-0.5 font-medium">Hitung batas pengaman harga beli terhadap estimasi harga intrinsik (wajar) saham Anda</p>
             </div>
           </div>
