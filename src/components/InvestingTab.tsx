@@ -631,22 +631,30 @@ export default function InvestingTab() {
 
               {/* Milestones Perkembangan */}
               {compMilestones.length > 0 && (
-                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                  <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Milestone Pertumbuhan Portofolio</span>
-                    <span className="text-[9px] text-slate-400 font-medium">Berdasarkan tahun durasi</span>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Milestone Pertumbuhan Portofolio</span>
+                    <span className="text-[10px] text-slate-400 font-medium">Berdasarkan tahun durasi</span>
                   </div>
-                  <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 scrollbar-none">
+                  <div className="max-h-[400px] overflow-y-auto space-y-4 pr-1 scrollbar-none">
                     {compMilestones.map((ms) => (
-                      <div key={ms.year} className="px-4 py-2.5 flex justify-between items-center text-xs hover:bg-slate-50/40 transition-colors">
-                        <span className="font-bold text-slate-700 font-mono">Tahun {ms.year}</span>
-                        <div className="text-right">
-                          <span className="font-bold text-slate-800 font-mono block text-xs sm:text-sm">
-                            {formatRupiah(ms.value + ms.accumDiv)}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
-                            Portofolio: {formatRupiah(ms.value)} | Dividen Thn Ini: <span className="text-emerald-600 font-semibold">{formatRupiah(ms.dividendEarned)}</span>
-                          </span>
+                      <div key={ms.year} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+                        {/* Header Kartu */}
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-extrabold text-slate-800 text-sm font-sans">Tahun {ms.year}</h4>
+                        </div>
+                        {/* Garis pemisah tipis */}
+                        <div className="border-t border-slate-100 my-2"></div>
+                        {/* Isi Kartu */}
+                        <div className="space-y-2.5">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-medium font-sans">Portofolio:</span>
+                            <span className="font-bold text-slate-800 font-mono">{formatRupiah(ms.value)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-medium font-sans">Dividen Tahun Ini:</span>
+                            <span className="font-bold text-emerald-600 font-mono">{formatRupiah(ms.dividendEarned)}</span>
+                          </div>
                         </div>
                       </div>
                     ))}
