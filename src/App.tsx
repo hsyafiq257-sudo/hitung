@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { LineChart, Briefcase, Building, HelpCircle, Info, Calculator, ExternalLink, PieChart, Sun, Moon } from "lucide-react";
+import { LineChart, Briefcase, Building, HelpCircle, Info, Calculator, ExternalLink, PieChart, Sun, Moon, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 import Header from "./components/Header";
@@ -20,6 +20,7 @@ type ActiveTab = "trading" | "investing" | "compounding" | "portfolio" | "corpor
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("trading");
+  const [showResetModal, setShowResetModal] = useState<boolean>(false);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("theme");
@@ -282,16 +283,82 @@ export default function App() {
       </main>
 
       {/* Footer copyright */}
-      <footer id="app-footer-bar" className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
+      <footer id="app-footer-bar" className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-6 text-center text-xs text-slate-500 dark:text-slate-400 transition-colors">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <span>&copy; {new Date().getFullYear()} Kalkulator Saham Komprehensif. Hak Cipta Dilindungi.</span>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
             <span className="flex items-center gap-1">
               Didesain dengan presisi keuangan <span className="text-rose-500">♥</span> di Indonesia
             </span>
+            <button
+              id="reset-all-data-btn"
+              type="button"
+              onClick={() => setShowResetModal(true)}
+              className="px-2.5 py-1.5 text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-600 dark:bg-rose-950/20 dark:hover:bg-rose-600 hover:text-white dark:hover:text-white border border-rose-200 dark:border-rose-900/50 rounded-lg transition-all cursor-pointer shadow-sm active:scale-95"
+            >
+              Reset Semua Data
+            </button>
           </div>
         </div>
       </footer>
+
+      {/* Custom Reset Confirmation Modal */}
+      <AnimatePresence>
+        {showResetModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-6"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-xl text-rose-600 dark:text-rose-400 shrink-0">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    Hapus &amp; Reset Semua Data?
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Tindakan ini akan menghapus seluruh data yang tersimpan di browser Anda secara permanen, termasuk:
+                  </p>
+                  <ul className="text-xs text-slate-600 dark:text-slate-400 list-disc list-inside space-y-1 pl-1">
+                    <li>Daftar Saham di <strong>Watchlist</strong></li>
+                    <li>Daftar Saham di <strong>Portofolio Dividen</strong></li>
+                    <li>Pengaturan &amp; Persentase <strong>Alokasi Aset</strong></li>
+                    <li>Preferensi <strong>Tema (Dark/Light Mode)</strong></li>
+                  </ul>
+                  <p className="text-xs text-rose-600 dark:text-rose-400 font-semibold pt-1">
+                    Tindakan ini tidak dapat dibatalkan. Apakah Anda yakin?
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowResetModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.clear();
+                    window.location.reload();
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md shadow-rose-500/10 transition-all cursor-pointer"
+                >
+                  Ya, Reset Sekarang
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

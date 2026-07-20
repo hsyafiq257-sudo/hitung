@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Percent, AlertCircle, PieChart, Info, Plus, Trash2, Coins, Calendar, TrendingUp, Wallet, FileText, Download } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { jsPDF } from "jspdf";
@@ -29,14 +29,30 @@ export default function PortfolioTab() {
   // =========================================================
   // 1. STATE & LOGIC: ASSET ALLOCATION
   // =========================================================
-  const [allocationItems, setAllocationItems] = useState<PortfolioAllocationItem[]>([
-    { id: "1", assetName: "BBRI", percentage: 25, assetType: "Saham", sahamLots: 50, sahamAvgPrice: 4800, sahamCurrentPrice: 5100 },
-    { id: "2", assetName: "Reksadana Saham", percentage: 20, assetType: "Reksadana", buyNab: 1000, currentNab: 1150, totalUnits: 20000 },
-    { id: "3", assetName: "Emas Antam", percentage: 15, assetType: "Emas", goldWeight: 25, goldBuyPrice: 1000000, goldCurrentPrice: 1120000 },
-    { id: "4", assetName: "Bitcoin", percentage: 15, assetType: "Crypto", cryptoCoins: 0.1, cryptoBuyPrice: 900000000, cryptoCurrentPrice: 1050000000 },
-    { id: "5", assetName: "USD Cash", percentage: 15, assetType: "Valas", currencyName: "USD", valasAmount: 1000, valasBuyRate: 15000, valasCurrentRate: 16200 },
-    { id: "6", assetName: "Kas / RDPU", percentage: 10, assetType: "Kas", kasNominal: 10000000 },
-  ]);
+  const [allocationItems, setAllocationItems] = useState<PortfolioAllocationItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("portfolio_allocation");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to parse portfolio_allocation", e);
+        }
+      }
+    }
+    return [
+      { id: "1", assetName: "BBRI", percentage: 25, assetType: "Saham", sahamLots: 50, sahamAvgPrice: 4800, sahamCurrentPrice: 5100 },
+      { id: "2", assetName: "Reksadana Saham", percentage: 20, assetType: "Reksadana", buyNab: 1000, currentNab: 1150, totalUnits: 20000 },
+      { id: "3", assetName: "Emas Antam", percentage: 15, assetType: "Emas", goldWeight: 25, goldBuyPrice: 1000000, goldCurrentPrice: 1120000 },
+      { id: "4", assetName: "Bitcoin", percentage: 15, assetType: "Crypto", cryptoCoins: 0.1, cryptoBuyPrice: 900000000, cryptoCurrentPrice: 1050000000 },
+      { id: "5", assetName: "USD Cash", percentage: 15, assetType: "Valas", currencyName: "USD", valasAmount: 1000, valasBuyRate: 15000, valasCurrentRate: 16200 },
+      { id: "6", assetName: "Kas / RDPU", percentage: 10, assetType: "Kas", kasNominal: 10000000 },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("portfolio_allocation", JSON.stringify(allocationItems));
+  }, [allocationItems]);
 
   const updateAllocationName = (id: string, name: string) => {
     setAllocationItems(
@@ -140,50 +156,66 @@ export default function PortfolioTab() {
   // =========================================================
   // 2. STATE & LOGIC: DIVIDEND STOCK PORTFOLIO
   // =========================================================
-  const [dividendStocks, setDividendStocks] = useState<DividendStockItem[]>([
-    {
-      id: "1",
-      stockCode: "BBRI",
-      avgPrice: 4800,
-      currentPrice: 5100,
-      lots: 50,
-      frequencyType: 2,
-      distributions: [
-        { dps: 84, month: "Des" },
-        { dps: 235, month: "Mar" },
-        { dps: "", month: "" },
-        { dps: "", month: "" },
-      ],
-    },
-    {
-      id: "2",
-      stockCode: "TLKM",
-      avgPrice: 3500,
-      currentPrice: 3200,
-      lots: 30,
-      frequencyType: 1,
-      distributions: [
-        { dps: 140, month: "Jun" },
-        { dps: "", month: "" },
-        { dps: "", month: "" },
-        { dps: "", month: "" },
-      ],
-    },
-    {
-      id: "3",
-      stockCode: "PTBA",
-      avgPrice: 2600,
-      currentPrice: 2800,
-      lots: 40,
-      frequencyType: 1,
-      distributions: [
-        { dps: 380, month: "Jun" },
-        { dps: "", month: "" },
-        { dps: "", month: "" },
-        { dps: "", month: "" },
-      ],
-    },
-  ]);
+  const [dividendStocks, setDividendStocks] = useState<DividendStockItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("portfolio_dividend_stocks");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to parse portfolio_dividend_stocks", e);
+        }
+      }
+    }
+    return [
+      {
+        id: "1",
+        stockCode: "BBRI",
+        avgPrice: 4800,
+        currentPrice: 5100,
+        lots: 50,
+        frequencyType: 2,
+        distributions: [
+          { dps: 84, month: "Des" },
+          { dps: 235, month: "Mar" },
+          { dps: "", month: "" },
+          { dps: "", month: "" },
+        ],
+      },
+      {
+        id: "2",
+        stockCode: "TLKM",
+        avgPrice: 3500,
+        currentPrice: 3200,
+        lots: 30,
+        frequencyType: 1,
+        distributions: [
+          { dps: 140, month: "Jun" },
+          { dps: "", month: "" },
+          { dps: "", month: "" },
+          { dps: "", month: "" },
+        ],
+      },
+      {
+        id: "3",
+        stockCode: "PTBA",
+        avgPrice: 2600,
+        currentPrice: 2800,
+        lots: 40,
+        frequencyType: 1,
+        distributions: [
+          { dps: 380, month: "Jun" },
+          { dps: "", month: "" },
+          { dps: "", month: "" },
+          { dps: "", month: "" },
+        ],
+      },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("portfolio_dividend_stocks", JSON.stringify(dividendStocks));
+  }, [dividendStocks]);
 
   const updateStock = (id: string, field: keyof DividendStockItem, value: any) => {
     setDividendStocks(
