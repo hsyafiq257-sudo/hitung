@@ -10,10 +10,11 @@ import { motion, AnimatePresence } from "motion/react";
 import Header from "./components/Header";
 import TradingTab from "./components/TradingTab";
 import InvestingTab from "./components/InvestingTab";
+import CompoundingTab from "./components/CompoundingTab";
 import CorporateActionTab from "./components/CorporateActionTab";
 import PortfolioTab from "./components/PortfolioTab";
 
-type ActiveTab = "trading" | "investing" | "portfolio" | "corporate";
+type ActiveTab = "trading" | "investing" | "compounding" | "portfolio" | "corporate";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("trading");
@@ -36,7 +37,7 @@ export default function App() {
 
         {/* Navigation Tabs Bar */}
         <div id="navigation-tabs-bar" className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/60 shadow-sm">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 flex-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 flex-1">
             {/* Tab: TRADING */}
             <button
               id="tab-btn-trading"
@@ -65,6 +66,21 @@ export default function App() {
             >
               <Briefcase className="w-4 h-4 md:w-5 h-5" />
               <span>Investing</span>
+            </button>
+
+            {/* Tab: COMPOUNDING */}
+            <button
+              id="tab-btn-compounding"
+              type="button"
+              onClick={() => setActiveTab("compounding")}
+              className={`flex flex-col md:flex-row items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs md:text-sm tracking-wide uppercase transition-all cursor-pointer ${
+                activeTab === "compounding"
+                  ? "bg-white text-indigo-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/40"
+              }`}
+            >
+              <Calculator className="w-4 h-4 md:w-5 h-5" />
+              <span>Compounding</span>
             </button>
 
             {/* Tab: PORTFOLIO */}
@@ -123,6 +139,18 @@ export default function App() {
                 transition={{ duration: 0.2 }}
               >
                 <InvestingTab />
+              </motion.div>
+            )}
+
+            {activeTab === "compounding" && (
+              <motion.div
+                key="compounding-tab-view"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.2 }}
+              >
+                <CompoundingTab />
               </motion.div>
             )}
 

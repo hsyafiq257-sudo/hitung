@@ -4,9 +4,10 @@
  */
 
 import React, { useState } from "react";
-import { Percent, AlertCircle, PieChart, Info, Plus, Trash2, Coins, Calendar, TrendingUp, Wallet } from "lucide-react";
+import { Percent, AlertCircle, PieChart, Info, Plus, Trash2, Coins, Calendar, TrendingUp, Wallet, FileText, Download } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { formatRupiah, formatPercent, generateId } from "../utils";
+import { jsPDF } from "jspdf";
+import { formatRupiah, formatNumber, formatPercent, generateId } from "../utils";
 import { PortfolioAllocationItem } from "../types";
 
 interface DividendDistribution {
@@ -445,6 +446,515 @@ export default function PortfolioTab() {
     return { cost, value };
   };
 
+  const exportAllocationPDF = () => {
+    const doc = new jsPDF("p", "mm", "a4");
+    const today = new Date().toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    const primaryColor = [5, 150, 105]; // Emerald #059669
+    const secondaryColor = [30, 41, 59]; // Slate #1e293b
+    const textMuted = [100, 116, 139]; // Slate 500 #64748b
+    const blueColor = [79, 70, 229]; // Indigo #4f46e5
+
+    let currentY = 15;
+
+    const drawDivider = (y: number) => {
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.5);
+      doc.line(14, y, 196, y);
+    };
+
+    // Header Title
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("Laporan Ringkasan Alokasi Portofolio", 14, currentY + 5);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
+    doc.text(`Dicetak pada: ${today}`, 14, currentY + 11);
+    
+    currentY += 15;
+    drawDivider(currentY);
+    currentY += 7;
+
+    // Section 1: Ringkasan & Performa Seluruh Aset
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("RINGKASAN & PERFORMA SELURUH ASET", 14, currentY);
+    
+    currentY += 5;
+
+    // Cards Grid for Net Worth Summary
+    const isProfit = fluctuatingGain >= 0;
+    const summaryData = [
+      ["Kekayaan Bersih (Net Worth)", formatRupiah(netWorth), "Nilai pasar seluruh aset saat ini"],
+      ["Total Modal Investasi", formatRupiah(netWorthTotalCost), "Total akumulasi harga beli awal"],
+      ["Pertumbuhan Aset", `${isProfit ? "+" : ""}${formatRupiah(fluctuatingGain)} (${isProfit ? "+" : ""}${formatPercent(fluctuatingGainPercent)})`, "Hasil dari aset berfluktuasi saja"],
+      ["Passive Income Gabungan", `${formatRupiah(totalPassiveIncome)} / tahun`, `Estimasi: ${formatRupiah(Math.round(monthlyPassiveIncome))} / bulan`],
+    ];
+
+    doc.setFontSize(9);
+    let summaryY = currentY;
+    summaryData.forEach(([label, val, desc], index) => {
+      const col = index % 2;
+      const x = col === 0 ? 14 : 110;
+      const cardY = summaryY + Math.floor(index / 2) * 16;
+      
+      doc.setFillColor(248, 250, 252); // slate-50
+      doc.roundedRect(x, cardY, 82, 13, 1, 1, "F");
+      
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 116, 139); // slate-500
+      doc.setFontSize(7.5);
+      doc.text(label.toUpperCase(), x + 3, cardY + 3.5);
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      if (label.includes("Kekayaan Bersih")) {
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      } else if (label.includes("Pertumbuhan Aset")) {
+        doc.setTextColor(isProfit ? 5 : 225, isProfit ? 150 : 29, isProfit ? 69 : 72);
+      } else if (label.includes("Passive Income")) {
+        doc.setTextColor(blueColor[0], blueColor[1], blueColor[2]);
+      } else {
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      }
+      doc.text(val, x + 3, cardY + 8);
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(148, 163, 184); // slate-400
+      doc.setFontSize(6.5);
+      doc.text(desc, x + 3, cardY + 11.2);
+    });
+
+    currentY += Math.ceil(summaryData.length / 2) * 16 + 4;
+    drawDivider(currentY);
+    currentY += 7;
+
+    // Section 2: Tabel Rincian Alokasi per Kelas Aset
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("RINCIAN ALOKASI & KINERJA PER KELAS ASET", 14, currentY);
+    
+    currentY += 5;
+
+    const tableHeaders = [
+      "Nama Aset & Rincian",
+      "Kelas Aset",
+      "Modal (Cost)",
+      "Nilai Pasar",
+      "Porsi (%)",
+      "Performa (Unrealized G/L)"
+    ];
+    const colWidths = [45, 25, 28, 28, 18, 38]; // Sum = 182mm
+
+    // Draw header row background
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(14, currentY, 182, 7, "F");
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+
+    let startX = 14;
+    tableHeaders.forEach((th, idx) => {
+      const align = idx === 0 || idx === 1 ? "left" : "right";
+      const textX = align === "left" ? startX + 2 : startX + colWidths[idx] - 2;
+      doc.text(th, textX, currentY + 4.8, { align: align as "left" | "right" | "center" });
+      startX += colWidths[idx];
+    });
+
+    currentY += 7;
+
+    // Table rows
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+
+    allocationItems.forEach((item, itemIdx) => {
+      const metrics = getAllocationItemMetrics(item);
+      const cost = metrics.cost;
+      const val = metrics.value;
+      const pct = netWorth > 0 ? (val / netWorth) * 100 : 0;
+      const gain = val - cost;
+      const gainPct = cost > 0 ? (gain / cost) * 100 : 0;
+
+      // Get detail label string
+      let detailStr = "";
+      if (item.assetType === "Saham") {
+        const lots = item.sahamLots ?? 0;
+        const avg = item.sahamAvgPrice ?? 0;
+        detailStr = `${lots} Lot @ Rp ${formatNumber(avg)}`;
+      } else if (item.assetType === "Reksadana") {
+        const units = item.totalUnits ?? 0;
+        const nab = item.buyNab ?? 0;
+        detailStr = `${formatNumber(units)} Unit @ Rp ${formatNumber(nab)}`;
+      } else if (item.assetType === "Emas") {
+        const w = item.goldWeight ?? 0;
+        const price = item.goldBuyPrice ?? 0;
+        detailStr = `${w} gr @ Rp ${formatNumber(price)}/gr`;
+      } else if (item.assetType === "Crypto") {
+        const coins = item.cryptoCoins ?? 0;
+        const price = item.cryptoBuyPrice ?? 0;
+        detailStr = `${coins} Coin @ Rp ${formatNumber(price)}`;
+      } else if (item.assetType === "Valas") {
+        const amt = item.valasAmount ?? 0;
+        const rate = item.valasBuyRate ?? 0;
+        const currName = item.currencyName ?? "USD";
+        detailStr = `${formatNumber(amt)} ${currName} @ Rp ${formatNumber(rate)}`;
+      } else if (item.assetType === "SBN/Obligasi") {
+        const nominal = item.sbnNominal ?? 0;
+        const coupon = item.sbnCouponPercent ?? 0;
+        detailStr = `Nominal Rp ${formatNumber(nominal)} (Kupon: ${coupon}%)`;
+      } else if (item.assetType === "Deposito") {
+        const nominal = item.depositoNominal ?? 0;
+        const interest = item.depositoInterestPercent ?? 0;
+        detailStr = `Nominal Rp ${formatNumber(nominal)} (Bunga: ${interest}%)`;
+      } else {
+        detailStr = "Simpanan Kas / Likuid";
+      }
+
+      // Zebra striping
+      if (itemIdx % 2 === 1) {
+        doc.setFillColor(248, 250, 252); // slate-50
+        doc.rect(14, currentY, 182, 9, "F");
+      }
+
+      doc.setTextColor(30, 41, 59); // slate-800
+      
+      // Draw cells
+      let sX = 14;
+      
+      // Column 1: Name and detail
+      doc.setFont("helvetica", "bold");
+      doc.text(item.assetName || `Aset ${itemIdx + 1}`, sX + 2, currentY + 3.5);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6);
+      doc.setTextColor(100, 116, 139);
+      doc.text(detailStr, sX + 2, currentY + 7);
+      doc.setFontSize(7.5);
+      sX += colWidths[0];
+
+      // Column 2: Type
+      doc.setTextColor(51, 65, 85);
+      doc.text(item.assetType || "Saham", sX + 2, currentY + 5);
+      sX += colWidths[1];
+
+      // Column 3: Cost
+      doc.text(formatRupiah(cost), sX + colWidths[2] - 2, currentY + 5, { align: "right" });
+      sX += colWidths[2];
+
+      // Column 4: Market Value
+      doc.setFont("helvetica", "bold");
+      doc.text(formatRupiah(val), sX + colWidths[3] - 2, currentY + 5, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      sX += colWidths[3];
+
+      // Column 5: Porsi %
+      doc.text(`${pct.toFixed(1)}%`, sX + colWidths[4] - 2, currentY + 5, { align: "right" });
+      sX += colWidths[4];
+
+      // Column 6: G/L performa
+      const isItemProfit = gain >= 0;
+      const gainColor = isItemProfit ? [5, 150, 105] : [225, 29, 72];
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(gainColor[0], gainColor[1], gainColor[2]);
+      const gainText = `${isItemProfit ? "+" : ""}${formatRupiah(gain)} (${isItemProfit ? "+" : ""}${formatPercent(gainPct)})`;
+      doc.text(gainText, sX + colWidths[5] - 2, currentY + 5, { align: "right" });
+
+      currentY += 9;
+    });
+
+    currentY += 8;
+    drawDivider(currentY);
+    currentY += 6;
+
+    // SBN and Deposito specific details if they exist
+    if (sbnTotalCost > 0 || depositoTotalCost > 0) {
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text("Informasi Tambahan:", 14, currentY);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      let noteY = currentY + 4;
+      if (sbnTotalCost > 0) {
+        doc.text(`* SBN/Obligasi memberikan Kupon Pasif sebesar ${formatRupiah(sbnAnnualCoupon)}/tahun dari modal ${formatRupiah(sbnTotalCost)}.`, 14, noteY);
+        noteY += 4.5;
+      }
+      if (depositoTotalCost > 0) {
+        doc.text(`* Deposito memberikan Bunga sebesar ${formatRupiah(depositoAnnualInterest)}/tahun dari modal ${formatRupiah(depositoTotalCost)}.`, 14, noteY);
+      }
+    }
+
+    doc.save(`laporan_alokasi_portofolio_${today.replace(/ /g, "_")}.pdf`);
+  };
+
+  const exportDividendPDF = () => {
+    const doc = new jsPDF("p", "mm", "a4");
+    const today = new Date().toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    const primaryColor = [79, 70, 229]; // Indigo #4f46e5
+    const secondaryColor = [30, 41, 59]; // Slate #1e293b
+    const textMuted = [100, 116, 139]; // Slate 500 #64748b
+    const greenColor = [5, 150, 105]; // Emerald #059669
+
+    let currentY = 15;
+
+    const drawDivider = (y: number) => {
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.5);
+      doc.line(14, y, 196, y);
+    };
+
+    // Header Title
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("Laporan Portofolio Saham Dividen", 14, currentY + 5);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
+    doc.text(`Dicetak pada: ${today}`, 14, currentY + 11);
+    
+    currentY += 15;
+    drawDivider(currentY);
+    currentY += 7;
+
+    // Section 1: Ringkasan Portofolio Saham
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("RINGKASAN ESTIMASI PENERIMAAN DIVIDEN", 14, currentY);
+    
+    currentY += 5;
+
+    // Cards Grid for Dividends Summary
+    const isGain = totalCapitalGainValue >= 0;
+    const summaryData = [
+      ["Total Nilai Pasar Saham", formatRupiah(totalMarketValue), "Nilai pasar saham saat ini"],
+      ["Total Modal Saham", formatRupiah(totalDivCapital), "Akumulasi modal awal pembelian saham"],
+      ["Capital Gain/Loss", `${isGain ? "+" : ""}${formatRupiah(totalCapitalGainValue)} (${isGain ? "+" : ""}${formatPercent(totalCapitalGainPercent)})`, "Pertumbuhan nilai modal saham"],
+      ["Dividen Pasif Tahunan", formatRupiah(totalDivAnnual), `Yield Rata-Rata: ${formatPercent(avgDivYield)} p.a (On Cost)`],
+    ];
+
+    doc.setFontSize(9);
+    let summaryY = currentY;
+    summaryData.forEach(([label, val, desc], index) => {
+      const col = index % 2;
+      const x = col === 0 ? 14 : 110;
+      const cardY = summaryY + Math.floor(index / 2) * 16;
+      
+      doc.setFillColor(248, 250, 252); // slate-50
+      doc.roundedRect(x, cardY, 82, 13, 1, 1, "F");
+      
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 116, 139); // slate-500
+      doc.setFontSize(7.5);
+      doc.text(label.toUpperCase(), x + 3, cardY + 3.5);
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      if (label.includes("Dividen Pasif")) {
+        doc.setTextColor(greenColor[0], greenColor[1], greenColor[2]);
+      } else if (label.includes("Capital Gain")) {
+        doc.setTextColor(isGain ? greenColor[0] : 225, isGain ? greenColor[1] : 29, isGain ? greenColor[2] : 72);
+      } else {
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      }
+      doc.text(val, x + 3, cardY + 8);
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(148, 163, 184); // slate-400
+      doc.setFontSize(6.5);
+      doc.text(desc, x + 3, cardY + 11.2);
+    });
+
+    currentY += Math.ceil(summaryData.length / 2) * 16 + 4;
+    drawDivider(currentY);
+    currentY += 7;
+
+    // Section 2: Tabel Daftar Kepemilikan Saham Dividen
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("DAFTAR KEPEMILIKAN SAHAM DIVIDEN & METRIK", 14, currentY);
+    
+    currentY += 5;
+
+    const tableHeaders = [
+      "No",
+      "Kode",
+      "Lot",
+      "Avg Beli",
+      "Harga Skg",
+      "Total Modal",
+      "Capital Gain",
+      "Dividen Tahunan / Yield"
+    ];
+    const colWidths = [8, 18, 12, 22, 22, 28, 28, 44]; // Sum = 182mm
+
+    // Draw header row background
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(14, currentY, 182, 7, "F");
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+
+    let startX = 14;
+    tableHeaders.forEach((th, idx) => {
+      const align = idx === 0 || idx === 1 ? "left" : "right";
+      const textX = align === "left" ? startX + 2 : startX + colWidths[idx] - 2;
+      doc.text(th, textX, currentY + 4.8, { align: align as "left" | "right" | "center" });
+      startX += colWidths[idx];
+    });
+
+    currentY += 7;
+
+    // Table rows
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+
+    dividendStocks.forEach((stock, stockIdx) => {
+      // Check for page break
+      if (currentY + 10 > 280) {
+        doc.addPage();
+        currentY = 15;
+        
+        // Redraw header
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(14, currentY, 182, 7, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        
+        let sX = 14;
+        tableHeaders.forEach((th, idx) => {
+          const align = idx === 0 || idx === 1 ? "left" : "right";
+          const textX = align === "left" ? sX + 2 : sX + colWidths[idx] - 2;
+          doc.text(th, textX, currentY + 4.8, { align: align as "left" | "right" | "center" });
+          sX += colWidths[idx];
+        });
+        currentY += 7;
+      }
+
+      const lotsVal = stock.lots === "" ? 0 : stock.lots;
+      const avgPriceVal = stock.avgPrice === "" ? 0 : stock.avgPrice;
+      const currentPriceVal = stock.currentPrice === "" ? 0 : stock.currentPrice;
+      
+      const totalShares = lotsVal * 100;
+      const cost = totalShares * avgPriceVal;
+      const { percent: cgPct, rupiah: cgRupiah } = getCapitalGainForStock(stock);
+      const annualDiv = getAnnualDividendForStock(stock);
+      const effectiveDPS = getEffectiveDPSForStock(stock);
+      const yieldOnCost = avgPriceVal > 0 ? (effectiveDPS / avgPriceVal) * 100 : 0;
+
+      // Format distributions text (e.g., "95 (Mar), 235 (Des)")
+      const dists: string[] = [];
+      for (let i = 0; i < stock.frequencyType; i++) {
+        if (stock.distributions[i]) {
+          const d = stock.distributions[i];
+          if (d.dps !== "") {
+            dists.push(`${d.dps} (${d.month || "?"})`);
+          }
+        }
+      }
+      const distsText = dists.length > 0 ? `Payouts: ${dists.join(", ")}` : "Belum ditentukan";
+
+      // Zebra striping
+      if (stockIdx % 2 === 1) {
+        doc.setFillColor(248, 250, 252); // slate-50
+        doc.rect(14, currentY, 182, 9, "F");
+      }
+
+      doc.setTextColor(30, 41, 59); // slate-800
+      
+      let sX = 14;
+      
+      // Column 1: No
+      doc.text(`${stockIdx + 1}`, sX + 2, currentY + 5);
+      sX += colWidths[0];
+
+      // Column 2: Kode Saham
+      doc.setFont("helvetica", "bold");
+      doc.text(stock.stockCode || "KODE", sX + 2, currentY + 5);
+      doc.setFont("helvetica", "normal");
+      sX += colWidths[1];
+
+      // Column 3: Lots
+      doc.text(`${lotsVal}`, sX + colWidths[2] - 2, currentY + 5, { align: "right" });
+      sX += colWidths[2];
+
+      // Column 4: Avg Buy
+      doc.text(formatNumber(avgPriceVal), sX + colWidths[3] - 2, currentY + 5, { align: "right" });
+      sX += colWidths[3];
+
+      // Column 5: Current Price
+      doc.text(formatNumber(currentPriceVal), sX + colWidths[4] - 2, currentY + 5, { align: "right" });
+      sX += colWidths[4];
+
+      // Column 6: Total Cost
+      doc.text(formatRupiah(cost), sX + colWidths[5] - 2, currentY + 5, { align: "right" });
+      sX += colWidths[5];
+
+      // Column 7: Capital Gain
+      const isStockProfit = cgRupiah >= 0;
+      const cgColor = isStockProfit ? [5, 150, 105] : [225, 29, 72];
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(cgColor[0], cgColor[1], cgColor[2]);
+      doc.text(`${isStockProfit ? "+" : ""}${formatNumber(cgRupiah)}`, sX + colWidths[6] - 2, currentY + 4, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6);
+      doc.text(`${isStockProfit ? "+" : ""}${cgPct.toFixed(1)}%`, sX + colWidths[6] - 2, currentY + 7, { align: "right" });
+      doc.setFontSize(7.5);
+      sX += colWidths[6];
+
+      // Column 8: Dividend / Yield
+      doc.setTextColor(greenColor[0], greenColor[1], greenColor[2]);
+      doc.setFont("helvetica", "bold");
+      doc.text(formatRupiah(annualDiv), sX + colWidths[7] - 2, currentY + 3.5, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.2);
+      doc.setTextColor(148, 163, 184); // slate-400
+      doc.text(`${yieldOnCost.toFixed(2)}% | ${distsText}`, sX + colWidths[7] - 2, currentY + 7, { align: "right" });
+      doc.setFontSize(7.5);
+
+      currentY += 9;
+    });
+
+    currentY += 8;
+    drawDivider(currentY);
+    currentY += 6;
+
+    // Monthly equivalence footnote banner in PDF
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(14, currentY, 182, 12, 1, 1, "F");
+    
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.text("ESTIMASI PASSIVE INCOME BULANAN (MERATA)", 18, currentY + 5);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`* Total dividen tahunan Rp ${formatNumber(totalDivAnnual)} setara dengan sekitar Rp ${formatNumber(Math.round(monthlyDivEquivalent))}/bulan.`, 18, currentY + 9);
+
+    doc.save(`laporan_portofolio_saham_dividen_${today.replace(/ /g, "_")}.pdf`);
+  };
+
   return (
     <div id="portfolio-tab-container" className="space-y-12">
       {/* Intro Alert for Portfolio Allocation */}
@@ -457,7 +967,7 @@ export default function PortfolioTab() {
 
       {/* ======================= SECTION 1: ASSET ALLOCATION ======================= */}
       <section id="allocation-section" className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="bg-slate-50 border-b border-slate-200 p-6">
+        <div className="bg-slate-50 border-b border-slate-200 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-50 rounded-lg">
               <Percent className="w-6 h-6 text-emerald-600" />
@@ -467,6 +977,13 @@ export default function PortfolioTab() {
               <p className="text-xs text-slate-500 mt-0.5 font-medium">Bagi modal investasi Anda ke berbagai aset/saham secara aman dan terukur</p>
             </div>
           </div>
+          <button
+            onClick={exportAllocationPDF}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 border border-rose-100 uppercase tracking-wider cursor-pointer shadow-sm hover:shadow active:scale-95 shrink-0"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Download Laporan (PDF)</span>
+          </button>
         </div>
 
         <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -1114,7 +1631,7 @@ export default function PortfolioTab() {
 
       {/* ======================= SECTION 2: DIVIDEND STOCK PORTFOLIO ======================= */}
       <section id="dividend-portfolio-section" className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="bg-slate-50 border-b border-slate-200 p-6">
+        <div className="bg-slate-50 border-b border-slate-200 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-50 rounded-lg">
               <Coins className="w-6 h-6 text-indigo-600" />
@@ -1124,6 +1641,13 @@ export default function PortfolioTab() {
               <p className="text-xs text-slate-500 mt-0.5 font-medium">Monitor potensi penerimaan dividen pasif Anda berdasarkan rata-rata harga modal saham</p>
             </div>
           </div>
+          <button
+            onClick={exportDividendPDF}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all duration-200 border border-rose-100 uppercase tracking-wider cursor-pointer shadow-sm hover:shadow active:scale-95 shrink-0"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Download Laporan (PDF)</span>
+          </button>
         </div>
 
         <div className="p-4 sm:p-6 space-y-6">
