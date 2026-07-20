@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
-import { LineChart, Briefcase, Building, HelpCircle, Info, Calculator, ExternalLink, PieChart } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { LineChart, Briefcase, Building, HelpCircle, Info, Calculator, ExternalLink, PieChart, Sun, Moon } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 import Header from "./components/Header";
@@ -13,11 +13,32 @@ import InvestingTab from "./components/InvestingTab";
 import CompoundingTab from "./components/CompoundingTab";
 import CorporateActionTab from "./components/CorporateActionTab";
 import PortfolioTab from "./components/PortfolioTab";
+import WatchlistTab from "./components/WatchlistTab";
+import { Eye } from "lucide-react";
 
-type ActiveTab = "trading" | "investing" | "compounding" | "portfolio" | "corporate";
+type ActiveTab = "trading" | "investing" | "compounding" | "portfolio" | "corporate" | "watchlist";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("trading");
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme) {
+        return savedTheme === "dark";
+      }
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   return (
     <div id="app-root-container" className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
@@ -37,7 +58,7 @@ export default function App() {
 
         {/* Navigation Tabs Bar */}
         <div id="navigation-tabs-bar" className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/60 shadow-sm">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 flex-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 flex-1">
             {/* Tab: TRADING */}
             <button
               id="tab-btn-trading"
@@ -112,7 +133,42 @@ export default function App() {
               <Building className="w-4 h-4 md:w-5 h-5" />
               <span className="text-center">Corp Action</span>
             </button>
+
+            {/* Tab: WATCHLIST */}
+            <button
+              id="tab-btn-watchlist"
+              type="button"
+              onClick={() => setActiveTab("watchlist")}
+              className={`flex flex-col md:flex-row items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs md:text-sm tracking-wide uppercase transition-all cursor-pointer ${
+                activeTab === "watchlist"
+                  ? "bg-white text-rose-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/40"
+              }`}
+            >
+              <Eye className="w-4 h-4 md:w-5 h-5" />
+              <span>Watchlist</span>
+            </button>
           </div>
+
+          <button
+            id="theme-toggle-btn"
+            type="button"
+            onClick={() => setDarkMode(!darkMode)}
+            className="flex items-center justify-center gap-2 p-3 px-4 sm:p-2.5 sm:px-3 rounded-xl font-bold text-xs tracking-wide uppercase transition-all duration-300 cursor-pointer bg-white text-slate-700 border border-slate-200 shadow-sm hover:bg-slate-50 active:scale-95 shrink-0"
+            title={darkMode ? "Aktifkan Mode Terang" : "Aktifkan Mode Gelap"}
+          >
+            {darkMode ? (
+              <>
+                <Sun className="w-4 h-4 text-amber-500" />
+                <span className="sm:hidden md:inline">Mode Terang</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4 text-indigo-600" />
+                <span className="sm:hidden md:inline">Mode Gelap</span>
+              </>
+            )}
+          </button>
         </div>
 
         {/* Dynamic Calculator Tab Wrapper with Smooth Fade-in */}
@@ -175,6 +231,18 @@ export default function App() {
                 transition={{ duration: 0.2 }}
               >
                 <CorporateActionTab />
+              </motion.div>
+            )}
+
+            {activeTab === "watchlist" && (
+              <motion.div
+                key="watchlist-tab-view"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.2 }}
+              >
+                <WatchlistTab />
               </motion.div>
             )}
           </AnimatePresence>

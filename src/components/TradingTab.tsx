@@ -13,38 +13,11 @@ export default function TradingTab() {
   // 1. STATE & LOGIC: UNTUNG / RUGI BROKER FEE
   // ==========================================
   const [stockName, setStockName] = useState("BBRI");
-  const [brokerName, setBrokerName] = useState("Ajaib Sekuritas");
   const [buyPrice, setBuyPrice] = useState<number | "">(5000);
   const [sellPrice, setSellPrice] = useState<number | "">(5500);
   const [lots, setLots] = useState<number | "">(10);
   const [buyFeePercent, setBuyFeePercent] = useState<number | "">(0.15);
   const [sellFeePercent, setSellFeePercent] = useState<number | "">(0.25);
-
-  const [brokerPreset, setBrokerPreset] = useState("custom");
-
-  const brokerPresets = [
-    { name: "Ajaib (Beli: 0.15% | Jual: 0.25%)", bFee: 0.15, sFee: 0.25, id: "ajaib" },
-    { name: "Mirae (Beli: 0.15% | Jual: 0.25%)", bFee: 0.15, sFee: 0.25, id: "mirae" },
-    { name: "Mandiri Sekuritas (Beli: 0.18% | Jual: 0.28%)", bFee: 0.18, sFee: 0.28, id: "mandiri" },
-    { name: "Stockbit (Beli: 0.15% | Jual: 0.25%)", bFee: 0.15, sFee: 0.25, id: "stockbit" },
-    { name: "Indo Premier (Beli: 0.19% | Jual: 0.29%)", bFee: 0.19, sFee: 0.29, id: "ipots" },
-  ];
-
-  const handlePresetChange = (presetId: string) => {
-    setBrokerPreset(presetId);
-    if (presetId !== "custom") {
-      const selected = brokerPresets.find((p) => p.id === presetId);
-      if (selected) {
-        setBuyFeePercent(selected.bFee);
-        setSellFeePercent(selected.sFee);
-        // Extract plain name
-        const cleanName = selected.name.split(" (")[0];
-        setBrokerName(cleanName);
-      }
-    } else {
-      setBrokerName("Custom");
-    }
-  };
 
   // Calculations for Broker fee calculator
   const effectiveBuyPrice = buyPrice === "" ? 0 : buyPrice;
@@ -155,25 +128,8 @@ export default function TradingTab() {
         </div>
 
         <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Inputs Panel */}
+            {/* Inputs Panel */}
           <div className="lg:col-span-5 space-y-5">
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/60">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Preset Fee Broker</label>
-              <select
-                id="broker-preset-select"
-                value={brokerPreset}
-                onChange={(e) => handlePresetChange(e.target.value)}
-                className="w-full bg-white border border-slate-200 text-slate-800 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
-              >
-                <option value="custom">-- Custom Broker / Isi Manual --</option>
-                {brokerPresets.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Nama Saham / Emiten</label>
@@ -242,8 +198,6 @@ export default function TradingTab() {
                       onChange={(e) => {
                         const val = e.target.value;
                         setBuyFeePercent(val === "" ? "" : Math.max(0, parseFloat(val) || 0));
-                        setBrokerPreset("custom");
-                        setBrokerName("Custom");
                       }}
                       className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg pl-3.5 pr-8 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                     />
@@ -260,8 +214,6 @@ export default function TradingTab() {
                       onChange={(e) => {
                         const val = e.target.value;
                         setSellFeePercent(val === "" ? "" : Math.max(0, parseFloat(val) || 0));
-                        setBrokerPreset("custom");
-                        setBrokerName("Custom");
                       }}
                       className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg pl-3.5 pr-8 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                     />
@@ -355,7 +307,7 @@ export default function TradingTab() {
 
             {/* Custom transaction summary box */}
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs text-slate-600 leading-relaxed font-sans">
-              <span className="font-bold text-slate-800">Ringkasan Transaksi:</span> Transaksi saham <span className="text-indigo-600 font-bold">{stockName || "Saham"}</span> menggunakan broker <span className="text-indigo-600 font-bold">{brokerName || "Custom"}</span> dengan akumulasi tarif total fee beli <span className="font-mono font-semibold">{buyFeePercent || 0}%</span> dan fee jual <span className="font-mono font-semibold">{sellFeePercent || 0}%</span>. Pembelian sebanyak <span className="font-bold text-slate-800">{lots || 0} Lot</span> pada harga <span className="font-mono font-bold text-slate-800">{formatRupiah(effectiveBuyPrice)}</span> memerlukan total modal bersih <span className="font-mono text-indigo-600 font-bold">{formatRupiah(totalNetCapital)}</span>. Jika seluruh unit dijual kembali pada harga <span className="font-mono text-slate-800">{formatRupiah(effectiveSellPrice)}</span>, hasil bersih yang dicairkan adalah <span className="font-mono text-emerald-600 font-bold">{formatRupiah(totalNetProceeds)}</span>, sehingga menghasilkan {isProfit ? <span className="text-emerald-600 font-extrabold">PROFIT BERSIH</span> : <span className="text-rose-600 font-extrabold">KERUGIAN BERSIH</span>} sebesar <span className={`font-mono font-extrabold ${isProfit ? "text-emerald-600" : "text-rose-600"}`}>{formatRupiah(profitCostNominal)}</span> ({formatPercent(profitCostPercent)}).
+              <span className="font-bold text-slate-800">Ringkasan Transaksi:</span> Transaksi saham <span className="text-indigo-600 font-bold">{stockName || "Saham"}</span> dengan akumulasi tarif total fee beli <span className="font-mono font-semibold">{buyFeePercent || 0}%</span> dan fee jual <span className="font-mono font-semibold">{sellFeePercent || 0}%</span>. Pembelian sebanyak <span className="font-bold text-slate-800">{lots || 0} Lot</span> pada harga <span className="font-mono font-bold text-slate-800">{formatRupiah(effectiveBuyPrice)}</span> memerlukan total modal bersih <span className="font-mono text-indigo-600 font-bold">{formatRupiah(totalNetCapital)}</span>. Jika seluruh unit dijual kembali pada harga <span className="font-mono text-slate-800">{formatRupiah(effectiveSellPrice)}</span>, hasil bersih yang dicairkan adalah <span className="font-mono text-emerald-600 font-bold">{formatRupiah(totalNetProceeds)}</span>, sehingga menghasilkan {isProfit ? <span className="text-emerald-600 font-extrabold">PROFIT BERSIH</span> : <span className="text-rose-600 font-extrabold">KERUGIAN BERSIH</span>} sebesar <span className={`font-mono font-extrabold ${isProfit ? "text-emerald-600" : "text-rose-600"}`}>{formatRupiah(profitCostNominal)}</span> ({formatPercent(profitCostPercent)}).
             </div>
           </div>
         </div>

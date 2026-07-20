@@ -14,3 +14,244 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ==========================================
+   DARK MODE OVERRIDES (PREMIUM COZY THEME)
+   ========================================== */
+
+/* Root and Base Layout */
+html.dark,
+html.dark body {
+  background-color: #0b0f19 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark #app-root-container {
+  background-color: #0b0f19 !important;
+  color: #f1f5f9 !important;
+}
+
+/* Base card backgrounds & borders */
+html.dark .bg-white,
+html.dark header,
+html.dark footer,
+html.dark section,
+html.dark #faq-education-section {
+  background-color: #111c2e !important;
+  border-color: #1e293b !important;
+}
+
+/* Inner section and list item backgrounds */
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/80 {
+  background-color: #152238 !important;
+}
+
+html.dark .bg-slate-100,
+html.dark .bg-slate-100\/50 {
+  background-color: #1a2c4c !important;
+}
+
+html.dark .bg-slate-200 {
+  background-color: #1e293b !important;
+}
+
+/* Dividers & Borders */
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-200\/60,
+html.dark .border-slate-300,
+html.dark .border-slate-400 {
+  border-color: #1e293b !important;
+}
+
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1e293b !important;
+}
+
+/* Interactive hover backgrounds */
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-50\/50:hover,
+html.dark .hover\:bg-slate-100:hover,
+html.dark .hover\:bg-slate-200\/40:hover {
+  background-color: #1e293b !important;
+}
+
+html.dark .hover\:border-slate-300:hover {
+  border-color: #334155 !important;
+}
+
+/* Text color overrides */
+html.dark .text-slate-900 { color: #f8fafc !important; }
+html.dark .text-slate-800 { color: #f1f5f9 !important; }
+html.dark .text-slate-700 { color: #e2e8f0 !important; }
+html.dark .text-slate-600 { color: #cbd5e1 !important; }
+html.dark .text-slate-500 { color: #94a3b8 !important; }
+html.dark .text-slate-400 { color: #64748b !important; }
+html.dark .text-slate-300 { color: #475569 !important; }
+
+html.dark .text-gray-900 { color: #f8fafc !important; }
+html.dark .text-gray-800 { color: #f1f5f9 !important; }
+html.dark .text-gray-700 { color: #e2e8f0 !important; }
+html.dark .text-gray-600 { color: #cbd5e1 !important; }
+html.dark .text-gray-500 { color: #94a3b8 !important; }
+
+/* Input, Select & Form controls */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #152238 !important;
+  border-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+html.dark input:focus,
+html.dark select:focus {
+  border-color: #4f46e5 !important;
+  --tw-ring-color: rgba(79, 70, 229, 0.2) !important;
+}
+
+html.dark input::placeholder {
+  color: #475569 !important;
+}
+
+/* Dropdown list items inside select */
+html.dark option {
+  background-color: #111c2e !important;
+  color: #f8fafc !important;
+}
+
+/* Indigo alerts & badges */
+html.dark .bg-indigo-50,
+html.dark .bg-indigo-50\/50,
+html.dark .bg-indigo-50\/80 {
+  background-color: rgba(79, 70, 229, 0.15) !important;
+  border-color: rgba(79, 70, 229, 0.3) !important;
+}
+html.dark .text-indigo-600,
+html.dark .text-indigo-700,
+html.dark .text-indigo-800 {
+  color: #818cf8 !important;
+}
+
+/* Emerald alerts & badges (profit, success) */
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-50\/50,
+html.dark .bg-emerald-50\/80 {
+  background-color: rgba(5, 150, 105, 0.15) !important;
+  border-color: rgba(5, 150, 105, 0.3) !important;
+}
+html.dark .text-emerald-600,
+html.dark .text-emerald-700,
+html.dark .text-emerald-800 {
+  color: #34d399 !important;
+}
+
+/* Amber alerts & badges (warning, action) */
+html.dark .bg-amber-50,
+html.dark .bg-amber-50\/50,
+html.dark .bg-amber-50\/80 {
+  background-color: rgba(217, 119, 6, 0.15) !important;
+  border-color: rgba(217, 119, 6, 0.3) !important;
+}
+html.dark .text-amber-600,
+html.dark .text-amber-700,
+html.dark .text-amber-800 {
+  color: #fbbf24 !important;
+}
+
+/* Rose alerts & badges (loss, danger) */
+html.dark .bg-rose-50,
+html.dark .bg-rose-50\/50,
+html.dark .bg-rose-50\/80 {
+  background-color: rgba(225, 29, 72, 0.15) !important;
+  border-color: rgba(225, 29, 72, 0.3) !important;
+}
+html.dark .text-rose-600,
+html.dark .text-rose-700,
+html.dark .text-rose-800 {
+  color: #fb7185 !important;
+}
+
+/* Violet alerts & badges */
+html.dark .bg-violet-50,
+html.dark .bg-violet-50\/50,
+html.dark .bg-violet-50\/80 {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+html.dark .text-violet-600,
+html.dark .text-violet-700,
+html.dark .text-violet-800 {
+  color: #a78bfa !important;
+}
+
+/* Table zebra striping */
+html.dark table tbody tr:nth-child(even),
+html.dark table tr.bg-slate-50 {
+  background-color: #152238 !important;
+}
+
+html.dark table tbody tr:hover {
+  background-color: #1e293b !important;
+}
+
+/* Recharts / SVG styling adjustments */
+html.dark svg text {
+  fill: #94a3b8 !important;
+}
+
+html.dark .recharts-tooltip-cursor {
+  stroke: #334155 !important;
+}
+
+html.dark .recharts-default-tooltip {
+  background-color: #111c2e !important;
+  border-color: #1e293b !important;
+}
+
+html.dark .recharts-tooltip-item-list {
+  color: #f1f5f9 !important;
+}
+
+/* Smooth Transitions */
+html, body, #app-root-container, header, footer, section, input, select, button, .bg-white, .bg-slate-50, .bg-slate-100 {
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 300ms;
+  transition-timing-function: ease-in-out;
+}
+
+/* Tab active overrides in Dark mode */
+html.dark #navigation-tabs-bar {
+  background-color: #111c2e !important;
+  border-color: #1e293b !important;
+}
+
+html.dark #navigation-tabs-bar button.bg-white {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+html.dark #navigation-tabs-bar button:not(.bg-white) {
+  color: #94a3b8 !important;
+}
+
+html.dark #navigation-tabs-bar button:not(.bg-white):hover {
+  background-color: #152238 !important;
+  color: #f8fafc !important;
+}
+
+/* Scrollbar customized for dark mode */
+html.dark ::-webkit-scrollbar-track {
+  background: #0b0f19;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
