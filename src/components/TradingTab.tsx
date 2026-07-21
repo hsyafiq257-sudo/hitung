@@ -108,6 +108,98 @@ export default function TradingTab() {
     feasibilityStatus = "INVALID";
   }
 
+  // ==========================================
+  // 4. STATE & LOGIC: ESTIMASI ARA & ARB
+  // ==========================================
+  const [refPrice, setRefPrice] = useState<number | "">(1000);
+  const [days, setDays] = useState<number | "">(1);
+
+  interface ProjectionRow {
+    day: number;
+    araPrice: number;
+    arbPrice: number;
+    araPercent: number;
+    arbPercent: number;
+  }
+
+  const getMultiDayProjections = (price: number | "", daysInput: number | ""): ProjectionRow[] => {
+    if (
+      price === "" ||
+      price <= 0 ||
+      isNaN(Number(price)) ||
+      daysInput === "" ||
+      daysInput <= 0 ||
+      isNaN(Number(daysInput))
+    ) {
+      return [];
+    }
+    const limitDays = Math.min(30, Math.max(1, Number(daysInput)));
+    
+    const getTickSize = (p: number): number => {
+      if (p < 200) return 1;
+      if (p < 500) return 2;
+      if (p < 2000) return 5;
+      if (p < 5000) return 10;
+      return 25;
+    };
+
+    const getPercentage = (p: number): number => {
+      if (p <= 200) return 0.35;
+      if (p <= 5000) return 0.25;
+      return 0.20;
+    };
+
+    const projectionsList: ProjectionRow[] = [];
+    let currentAraPrice = price;
+    let currentArbPrice = price;
+
+    for (let i = 1; i <= limitDays; i++) {
+      // Calculate ARA step
+      const araPct = getPercentage(currentAraPrice);
+      const rawAra = currentAraPrice * (1 + araPct);
+      const tickSizeAra = getTickSize(rawAra);
+      const nextAra = Math.floor(rawAra / tickSizeAra) * tickSizeAra;
+
+      // Calculate ARB step
+      const arbPct = getPercentage(currentArbPrice);
+      const rawArb = currentArbPrice * (1 - arbPct);
+      const tickSizeArb = getTickSize(rawArb);
+      let nextArb = Math.ceil(rawArb / tickSizeArb) * tickSizeArb;
+      if (nextArb < 50) {
+        nextArb = 50;
+      }
+
+      projectionsList.push({
+        day: i,
+        araPrice: nextAra,
+        arbPrice: nextArb,
+        araPercent: Number((araPct * 100).toFixed(1)),
+        arbPercent: Number((arbPct * 100).toFixed(1)),
+      });
+
+      currentAraPrice = nextAra;
+      currentArbPrice = nextArb;
+    }
+
+    return projectionsList;
+  };
+
+  const effectiveRefPrice = refPrice === "" ? 0 : refPrice;
+  const projections = getMultiDayProjections(effectiveRefPrice, days);
+
+  const araArbData = projections.length > 0 ? {
+    ara: projections[0].araPrice,
+    arb: projections[0].arbPrice,
+    percent: projections[0].araPercent,
+    tickSize: (() => {
+      if (effectiveRefPrice < 200) return 1;
+      if (effectiveRefPrice < 500) return 2;
+      if (effectiveRefPrice < 2000) return 5;
+      if (effectiveRefPrice < 5000) return 10;
+      return 25;
+    })()
+  } : { ara: 0, arb: 0, percent: 0, tickSize: 0 };
+
   return (
     <div id="trading-tab-container" className="space-y-12">
       {/* ======================= SECTION 1: UNTUNG/RUGI CALCULATOR ======================= */}
@@ -630,6 +722,234 @@ export default function TradingTab() {
                   <div className="w-full h-3 rounded-full bg-slate-200 overflow-hidden flex">
                     <div className="bg-rose-500 h-full transition-all" style={{ width: `${100 / (1 + riskRewardRatioMultiplier)}%` }} />
                     <div className="bg-emerald-500 h-full transition-all flex-1" />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ======================= SECTION 4: KALKULATOR ESTIMASI ARA & ARB ======================= */}
+      <section id="ara-arb-section" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm transition-colors">
+        <div className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 p-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg">
+              <ArrowUpDown className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">4. Kalkulator Estimasi ARA &amp; ARB (Compounding)</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Estimasi batasan harga Auto Reject Atas (ARA) dan Auto Reject Bawah (ARB) simetris Bursa Efek Indonesia (BEI) beruntun</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Inputs Panel */}
+          <div className="lg:col-span-5 space-y-5">
+            <h3 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">Acuan Harga &amp; Durasi</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Harga Acuan / Previous Close (Rp)</label>
+                <input
+                  type="number"
+                  value={refPrice}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setRefPrice("");
+                    } else {
+                      const parsed = parseInt(val);
+                      setRefPrice(isNaN(parsed) ? "" : Math.max(0, parsed));
+                    }
+                  }}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-3.5 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  placeholder="Contoh: 1000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Estimasi Berapa Hari / Kali (Max 30)</label>
+                <input
+                  type="number"
+                  value={days}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setDays("");
+                    } else {
+                      const parsed = parseInt(val);
+                      setDays(isNaN(parsed) ? "" : Math.max(0, parsed));
+                    }
+                  }}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-lg px-3.5 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  placeholder="Contoh: 1"
+                />
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 block font-medium">Pilih durasi &gt; 1 hari untuk menampilkan simulasi tabel beruntun (compound).</span>
+              </div>
+
+              {/* BEI Symmetric Auto Rejection Rules Reference */}
+              <div className="bg-indigo-50/50 dark:bg-indigo-950/10 border border-indigo-100/50 dark:border-indigo-950/30 p-4 rounded-xl space-y-2.5 text-xs">
+                <span className="font-bold text-slate-700 dark:text-slate-300 block">Panduan Batasan Auto Rejection (BEI):</span>
+                <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                  <div className="flex justify-between">
+                    <span>Rp50 - Rp200:</span>
+                    <span className="font-bold">±35%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Rp201 - Rp5.000:</span>
+                    <span className="font-bold">±25%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>&gt; Rp5.000:</span>
+                    <span className="font-bold">±20%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Outputs Panel */}
+          <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
+            <div className="space-y-4 w-full">
+              <h3 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">Hasil Estimasi</h3>
+              
+              {days === "" || Number(days) <= 1 ? (
+                /* Standard Layout for 1 Day */
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* ARA Card */}
+                    <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 p-5 rounded-xl space-y-2 text-left relative overflow-hidden transition-colors">
+                      <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">POTENSI MAKSIMAL (ARA)</span>
+                      <div>
+                        <span className="text-2xl font-extrabold font-mono text-emerald-800 dark:text-emerald-300">
+                          {refPrice && araArbData.ara > 0 ? formatRupiah(araArbData.ara) : "Rp 0"}
+                        </span>
+                        {refPrice && araArbData.ara > 0 && (
+                          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold block mt-1">
+                            Harga ARA (+{araArbData.percent}%)
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-emerald-600/90 dark:text-emerald-500/90 leading-normal">
+                        Batas atas penolakan penawaran otomatis oleh sistem JATS.
+                      </p>
+                      <TrendingUp className="absolute bottom-2 right-2 w-12 h-12 text-emerald-500/10 dark:text-emerald-400/5" />
+                    </div>
+
+                    {/* ARB Card */}
+                    <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 p-5 rounded-xl space-y-2 text-left relative overflow-hidden transition-colors">
+                      <span className="text-[11px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider block">BATAS MINIMAL (ARB)</span>
+                      <div>
+                        <span className="text-2xl font-extrabold font-mono text-rose-800 dark:text-rose-300">
+                          {refPrice && araArbData.arb > 0 ? formatRupiah(araArbData.arb) : "Rp 0"}
+                        </span>
+                        {refPrice && araArbData.arb > 0 && (
+                          <span className="text-xs text-rose-600 dark:text-rose-400 font-bold block mt-1">
+                            Harga ARB (-{araArbData.percent}%)
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-rose-600/90 dark:text-rose-500/90 leading-normal">
+                        Batas bawah penolakan penawaran otomatis oleh sistem JATS.
+                      </p>
+                      <TrendingDown className="absolute bottom-2 right-2 w-12 h-12 text-rose-500/10 dark:text-rose-400/5" />
+                    </div>
+                  </div>
+
+                  {/* Status and Fraction Information */}
+                  <div className="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                      Fraksi Harga: <strong className="text-slate-800 dark:text-slate-200 font-bold">±{araArbData.percent}%</strong>
+                    </span>
+                    {refPrice && refPrice > 0 && (
+                      <span className="text-[11px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                        Tick Size Acuan: Rp {araArbData.tickSize}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Multi-Day Compounding Layout */
+                <div className="space-y-4">
+                  {/* Info Badge */}
+                  <div className="bg-indigo-50/50 dark:bg-indigo-950/10 border border-indigo-100/50 dark:border-indigo-950/30 rounded-xl p-4 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Menampilkan simulasi perulangan hingga <strong>{days} hari kerja</strong>. Batas persentase auto rejection dan fraksi kelipatan harga (tick size) dihitung ulang secara dinamis mengikuti level harga pada tiap harinya.
+                  </div>
+
+                  {/* Highlighting Cards for Day N (Final Result) */}
+                  {projections.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Final Day ARA Card */}
+                      <div className="bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-900/40 p-4 rounded-xl flex items-center justify-between shadow-sm">
+                        <div>
+                          <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">Target ARA Hari ke-{days} (Akhir)</span>
+                          <span className="text-xl font-extrabold font-mono text-emerald-800 dark:text-emerald-300">
+                            {formatRupiah(projections[projections.length - 1].araPrice)}
+                          </span>
+                        </div>
+                        <TrendingUp className="w-8 h-8 text-emerald-600/20 dark:text-emerald-400/20" />
+                      </div>
+
+                      {/* Final Day ARB Card */}
+                      <div className="bg-rose-50/80 dark:bg-rose-950/20 border border-rose-300 dark:border-rose-900/40 p-4 rounded-xl flex items-center justify-between shadow-sm">
+                        <div>
+                          <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider block">Target ARB Hari ke-{days} (Akhir)</span>
+                          <span className="text-xl font-extrabold font-mono text-rose-800 dark:text-rose-300">
+                            {formatRupiah(projections[projections.length - 1].arbPrice)}
+                          </span>
+                        </div>
+                        <TrendingDown className="w-8 h-8 text-rose-600/20 dark:text-rose-400/20" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scrollable Table View */}
+                  <div className="overflow-hidden border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm bg-white dark:bg-slate-900">
+                    <div className="max-h-[300px] overflow-y-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 z-10">
+                          <tr className="text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider">
+                            <th className="p-3 text-center">Hari Ke-</th>
+                            <th className="p-3 text-right">Proyeksi Harga ARA</th>
+                            <th className="p-3 text-right">Proyeksi Harga ARB</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
+                          {projections.map((row) => {
+                            const isLast = row.day === days;
+                            return (
+                              <tr
+                                key={row.day}
+                                className={`transition-colors ${
+                                  isLast
+                                    ? "bg-indigo-50/70 dark:bg-indigo-950/30 text-slate-900 dark:text-slate-100 border-l-4 border-indigo-500"
+                                    : "text-slate-700 dark:text-slate-300 hover:bg-slate-50/50 dark:hover:bg-slate-800/20"
+                                }`}
+                              >
+                                <td className="p-3 text-center">
+                                  {isLast ? (
+                                    <span className="inline-flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-300 font-bold px-2.5 py-1 rounded text-[10px] uppercase tracking-wide">
+                                      Hari ke-{row.day} (Akhir)
+                                    </span>
+                                  ) : (
+                                    <span className="font-semibold text-slate-500 dark:text-slate-400">Hari {row.day}</span>
+                                  )}
+                                </td>
+                                <td className={`p-3 text-right ${isLast ? "text-emerald-700 dark:text-emerald-400 font-extrabold text-sm" : "text-emerald-600/90 dark:text-emerald-500/80 font-medium"}`}>
+                                  {formatRupiah(row.araPrice)} <span className="text-[10px] font-sans font-semibold text-slate-400 dark:text-slate-500 ml-1">(+{row.araPercent}%)</span>
+                                </td>
+                                <td className={`p-3 text-right ${isLast ? "text-rose-700 dark:text-rose-400 font-extrabold text-sm" : "text-rose-600/90 dark:text-rose-500/80 font-medium"}`}>
+                                  {formatRupiah(row.arbPrice)} <span className="text-[10px] font-sans font-semibold text-slate-400 dark:text-slate-500 ml-1">(-{row.arbPercent}%)</span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
